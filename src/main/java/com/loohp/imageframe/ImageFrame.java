@@ -23,8 +23,6 @@ package com.loohp.imageframe;
 import com.loohp.imageframe.config.Config;
 import com.loohp.imageframe.debug.Debug;
 import com.loohp.imageframe.listeners.Events;
-import com.loohp.imageframe.metrics.Charts;
-import com.loohp.imageframe.metrics.Metrics;
 import com.loohp.imageframe.objectholders.AnimatedFakeMapManager;
 import com.loohp.imageframe.objectholders.CombinedMapItemHandler;
 import com.loohp.imageframe.objectholders.IFPlayerManager;
@@ -39,7 +37,6 @@ import com.loohp.imageframe.objectholders.MapMarkerEditManager;
 import com.loohp.imageframe.objectholders.RateLimitedPacketSendingManager;
 import com.loohp.imageframe.objectholders.Scheduler;
 import com.loohp.imageframe.objectholders.UnsetState;
-import com.loohp.imageframe.updater.Updater;
 import com.loohp.imageframe.utils.ChatColorUtils;
 import com.loohp.imageframe.utils.MCVersion;
 import com.twelvemonkeys.imageio.plugins.webp.WebPImageReaderSpi;
@@ -69,12 +66,8 @@ public class ImageFrame extends JavaPlugin {
 
     public static MCVersion version;
 
-    public Metrics metrics;
-
     public static boolean viaHook = false;
     public static boolean viaDisableSmoothAnimationForLegacyPlayers = false;
-
-    public static boolean updaterEnabled;
     public static Scheduler.ScheduledTask updaterTask = null;
 
     public static String messageReloaded;
@@ -241,9 +234,6 @@ public class ImageFrame extends JavaPlugin {
             getServer().getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] This version of minecraft is unsupported! (" + version.toString() + ")");
         }
 
-        metrics = new Metrics(this, BSTATS_PLUGIN_ID);
-        Charts.setup(metrics);
-
         getDataFolder().mkdirs();
 
         if (!ImageIO.getImageReadersByFormatName("webp").hasNext()) {
@@ -267,7 +257,6 @@ public class ImageFrame extends JavaPlugin {
         }
 
         getServer().getPluginManager().registerEvents(new Debug(), this);
-        getServer().getPluginManager().registerEvents(new Updater(), this);
         getServer().getPluginManager().registerEvents(new Events(), this);
         getServer().getPluginManager().registerEvents(new Events.ModernEvents(), this);
 
@@ -407,10 +396,6 @@ public class ImageFrame extends JavaPlugin {
 
         if (updaterTask != null) {
             updaterTask.cancel();
-        }
-        updaterEnabled = config.getConfiguration().getBoolean("Updater");
-        if (updaterEnabled) {
-            Bukkit.getPluginManager().registerEvents(new Updater(), this);
         }
     }
 
