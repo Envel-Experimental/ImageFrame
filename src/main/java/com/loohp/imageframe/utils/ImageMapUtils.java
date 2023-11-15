@@ -57,6 +57,32 @@ public class ImageMapUtils {
         return ImageFrame.imageMapManager.getFromCreator(extraction.getFirst(), extraction.getSecond());
     }
 
+    public static ImageMap justGet(String str) {
+        int index = str.indexOf(':');
+        String imageMapName;
+        UUID playerUUID = null;
+
+        if (index < 0) {
+            imageMapName = str;
+        } else {
+            String playerName = str.substring(0, index);
+            imageMapName = str.substring(index + 1);
+            playerUUID = Bukkit.getOfflinePlayer(playerName).getUniqueId();
+        }
+
+        for (ImageMap imageMap : ImageFrame.imageMapManager.getMaps()) {
+            if (imageMap.getName().equalsIgnoreCase(imageMapName) &&
+                    (playerUUID == null || imageMap.getCreator().equals(playerUUID))) {
+                return imageMap;
+            }
+        }
+
+        return null;
+    }
+
+
+
+
     public static Set<String> getImageMapNameSuggestions(CommandSender sender, String str) {
         return getImageMapNameSuggestions(sender, str, ImageMapAccessPermissionType.BASE, imageMap -> true);
     }

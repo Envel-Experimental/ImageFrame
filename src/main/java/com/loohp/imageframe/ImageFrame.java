@@ -58,8 +58,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ImageFrame extends JavaPlugin {
-
-    public static final int BSTATS_PLUGIN_ID = 16773;
     public static final String CONFIG_ID = "config";
 
     public static ImageFrame plugin;

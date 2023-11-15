@@ -450,8 +450,7 @@ public class Commands implements CommandExecutor, TabCompleter {
             if (sender.hasPermission("imageframe.playback")) {
                 if (args.length > 2) {
                     try {
-                        MutablePair<UUID, String> pair = ImageMapUtils.extractImageMapPlayerPrefixedName(sender, args[1]);
-                        ImageMap imageMap = ImageMapUtils.getFromPlayerPrefixedName(sender, args[1]);
+                        ImageMap imageMap = ImageMapUtils.justGet(args[1]);
                         if (imageMap == null) {
                             sender.sendMessage(ImageFrame.messageNotAnImageMap);
                             return true;
@@ -660,7 +659,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                     ImageMap imageMap = null;
                     String url = null;
                     if (args.length > 1) {
-                        imageMap = ImageMapUtils.getFromPlayerPrefixedName(sender, args[1]);
+                        imageMap = ImageMapUtils.justGet(args[1]);
                         if (imageMap == null) {
                             url = args[1];
                         } else if (args.length > 2) {
@@ -668,14 +667,9 @@ public class Commands implements CommandExecutor, TabCompleter {
                         }
                     }
                     if (imageMap == null) {
-                        if (!(sender instanceof Player)) {
-                            sender.sendMessage(ImageFrame.messageNoConsole);
-                            return;
-                        }
                         MapView mapView = MapUtils.getPlayerMapView((Player) sender);
                         if (mapView == null) {
                             sender.sendMessage(ImageFrame.messageNotAnImageMap);
-                            return;
                         }
                         imageMap = ImageFrame.imageMapManager.getFromMapView(mapView);
                     }
