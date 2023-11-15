@@ -46,15 +46,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
@@ -226,63 +219,88 @@ public class ImageMapManager implements AutoCloseable {
         return isMapDeleted(mapView.getId());
     }
 
-    public synchronized void loadMaps() {
+    public void loadMapsAsync() {
+        Bukkit.getScheduler().runTaskAsynchronously(ImageFrame.plugin, () -> {
+            List<CompletableFuture<Void>> mapLoadFutures = new ArrayList<>();
+
+            clearMaps();
+
+            dataFolder.mkdirs();
+            File[] files = dataFolder.listFiles();
+
+            if (files == null) {
+                return;
+            }
+
+            Arrays.sort(files, FileUtils.BY_NUMBER_THAN_STRING);
+
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    Bukkit.getConsoleSender().sendMessage(ChatColor.GRAY + "[ImageFrame] Loading ImageMap ID " + file.getName());
+                    mapLoadFutures.add(loadImageMapAsync(file));
+                } else if (file.getName().equalsIgnoreCase("deletedMaps.bin")) {
+                    loadDeletedMapsBinary(file);
+                } else if (file.getName().equalsIgnoreCase("deletedMaps.json")) {
+                    loadDeletedMapsJson(file);
+                    backupAndDeleteLegacyFile(file);
+                }
+            }
+
+            CompletableFuture<Void> allMapLoadFuture = CompletableFuture.allOf(mapLoadFutures.toArray(new CompletableFuture[0]));
+
+            allMapLoadFuture.thenRun(() -> {
+                Bukkit.getConsoleSender().sendMessage(ChatColor.GREEN + "[ImageFrame] Data loading completed! Loaded " + maps.size() + " ImageMaps!");
+            });
+        });
+    }
+
+    private CompletableFuture<Void> loadImageMapAsync(File file) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                ImageMap imageMap = ImageMap.load(this, file).get();
+                addMap(imageMap);
+            } catch (Throwable e) {
+                Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMap data in " + file.getAbsolutePath());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void loadDeletedMapsBinary(File file) {
+        try (DataInputStream dataInputStream = new DataInputStream(Files.newInputStream(file.toPath()))) {
+            try {
+                deletedMapIds.add(dataInputStream.readInt());
+            } catch (EOFException ignore) {}
+        } catch (IOException e) {
+            Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMapManager data in " + file.getAbsolutePath());
+            e.printStackTrace();
+        }
+    }
+
+    private void loadDeletedMapsJson(File file) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8))) {
+            JsonObject json = GSON.fromJson(reader, JsonObject.class);
+            JsonArray deletedMapIdsArray = json.get("mapids").getAsJsonArray();
+            deletedMapIdsArray.forEach(element -> deletedMapIds.add(element.getAsInt()));
+        } catch (IOException e) {
+            Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMapManager data in " + file.getAbsolutePath());
+            e.printStackTrace();
+        }
+        saveDeletedMaps();
+    }
+
+    private void backupAndDeleteLegacyFile(File file) {
+        try {
+            Files.move(file.toPath(), new File(dataFolder, "deletedMaps.json.bak").toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private synchronized void clearMaps() {
         maps.clear();
         mapsByView.clear();
-        dataFolder.mkdirs();
-        File[] files = dataFolder.listFiles();
-        Arrays.sort(files, FileUtils.BY_NUMBER_THAN_STRING);
-        List<MutablePair<File, Future<? extends ImageMap>>> futures = new LinkedList<>();
-        for (File file : files) {
-            if (file.isDirectory()) {
-                Bukkit.getConsoleSender().sendMessage(ChatColor.GRAY + "[ImageFrame] Loading ImageMap ID " + file.getName());
-                try {
-                    futures.add(new MutablePair<>(file, ImageMap.load(this, file)));
-                } catch (Throwable e) {
-                    Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMap data in " + file.getAbsolutePath());
-                    e.printStackTrace();
-                }
-            } else if (file.getName().equalsIgnoreCase("deletedMaps.bin")) {
-                try (DataInputStream dataInputStream = new DataInputStream(Files.newInputStream(file.toPath()))) {
-                    try {
-                        deletedMapIds.add(dataInputStream.readInt());
-                    } catch (EOFException ignore) {}
-                } catch (IOException e) {
-                    Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMapManager data in " + file.getAbsolutePath());
-                    e.printStackTrace();
-                }
-            } else if (file.getName().equalsIgnoreCase("deletedMaps.json")) { //legacy storage support
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8))) {
-                    JsonObject json = GSON.fromJson(reader, JsonObject.class);
-                    JsonArray deletedMapIdsArray = json.get("mapids").getAsJsonArray();
-                    for (JsonElement element : deletedMapIdsArray) {
-                        deletedMapIds.add(element.getAsInt());
-                    }
-                } catch (IOException e) {
-                    Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMapManager data in " + file.getAbsolutePath());
-                    e.printStackTrace();
-                }
-                saveDeletedMaps();
-                try {
-                    Files.move(file.toPath(), new File(dataFolder, "deletedMaps.json.bak").toPath());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        Scheduler.runTaskAsynchronously(ImageFrame.plugin, () -> {
-            int count = 0;
-            for (MutablePair<File, Future<? extends ImageMap>> pair : futures) {
-                try {
-                    addMap(pair.getSecond().get());
-                    count++;
-                } catch (Throwable e) {
-                    Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMap data in " + pair.getFirst().getAbsolutePath());
-                    e.printStackTrace();
-                }
-            }
-            Bukkit.getConsoleSender().sendMessage(ChatColor.GREEN + "[ImageFrame] Data loading completed! Loaded " + count + " ImageMaps!");
-        });
+        deletedMapIds.clear();
     }
 
     public synchronized void saveDeletedMaps() {

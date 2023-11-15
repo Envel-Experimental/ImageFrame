@@ -265,7 +265,7 @@ public class ImageFrame extends JavaPlugin {
         combinedMapItemHandler = new CombinedMapItemHandler();
         animatedFakeMapManager = new AnimatedFakeMapManager();
         rateLimitedPacketSendingManager = new RateLimitedPacketSendingManager();
-        Scheduler.runTaskAsynchronously(this, () -> imageMapManager.loadMaps());
+        Scheduler.runTaskAsynchronously(this, () -> imageMapManager.loadMapsAsync());
 
         getServer().getConsoleSender().sendMessage(ChatColor.GREEN + "[ImageFrame] ImageFrame has been Enabled!");
     }
