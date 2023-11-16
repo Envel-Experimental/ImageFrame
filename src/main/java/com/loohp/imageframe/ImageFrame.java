@@ -284,6 +284,7 @@ public class ImageFrame extends JavaPlugin {
         if (combinedMapItemHandler != null) {
             combinedMapItemHandler.close();
         }
+        getServer().getScheduler().cancelTasks(this);
         getServer().getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] ImageFrame has been Disabled!");
     }
 
