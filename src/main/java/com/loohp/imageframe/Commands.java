@@ -739,6 +739,37 @@ public class Commands implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ImageFrame.messageNoPermission);
             }
             return true;
+        } else if (args[0].equalsIgnoreCase("imageupdate")) {
+            if (sender.hasPermission("imageframe.imageupdate")) {
+                if (args.length == 3) {
+                    try {
+                        ImageMap sourceImageMap = ImageMapUtils.justGet(args[1]);
+                        if (sourceImageMap == null) {
+                            sender.sendMessage(ImageFrame.messageNotAnImageMap);
+                            return true;
+                        }
+
+                        ImageMap templateImageMap = ImageMapUtils.justGet(args[2]);
+                        if (templateImageMap == null) {
+                            sender.sendMessage(ImageFrame.messageNotAnImageMap);
+                            return true;
+                        }
+
+                        sourceImageMap.copyFrom(templateImageMap);
+                        sourceImageMap.update();
+
+                        sender.sendMessage(ImageFrame.messageImageMapRefreshed);
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    sender.sendMessage(ImageFrame.messageInvalidUsage);
+                }
+            } else {
+                sender.sendMessage(ImageFrame.messageNoPermission);
+            }
+            return true;
         } else if (args[0].equalsIgnoreCase("info")) {
             if (sender.hasPermission("imageframe.info")) {
                 MapView mapView;
@@ -1222,6 +1253,9 @@ public class Commands implements CommandExecutor, TabCompleter {
                 }
                 if (sender.hasPermission("imageframe.refresh")) {
                     tab.add("refresh");
+                }
+                if (sender.hasPermission("imageframe.imageupdate")) {
+                    tab.add("imageupdate");
                 }
                 if (sender.hasPermission("imageframe.rename")) {
                     tab.add("rename");

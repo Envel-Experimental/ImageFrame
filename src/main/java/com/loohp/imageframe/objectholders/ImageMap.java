@@ -494,4 +494,25 @@ public abstract class ImageMap {
 
     }
 
+    public void copyFrom(ImageMap sourceImageMap) {
+        List<MapView> sourceMapViews = sourceImageMap.getMapViews();
+        for (int i = 0; i < mapViews.size(); i++) {
+            MapView sourceMapView = sourceMapViews.get(i);
+            MapView targetMapView = mapViews.get(i);
+
+            for (MapRenderer renderer : targetMapView.getRenderers()) {
+                targetMapView.removeRenderer(renderer);
+            }
+
+            for (MapRenderer sourceRenderer : sourceMapView.getRenderers()) {
+                targetMapView.addRenderer(sourceRenderer);
+            }
+        }
+
+        try {
+            update();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

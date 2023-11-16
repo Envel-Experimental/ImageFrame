@@ -15,6 +15,9 @@ commands:
     description: Plugin main command
 
 permissions:
+  imageframe.imageupdate:
+    default: true
+    description: Allows to update an image map from another image map.
   imageframe.create:
     default: true
     description: Allow players to create new image maps
