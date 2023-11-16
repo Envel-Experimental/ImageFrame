@@ -743,9 +743,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                         }
 
                         CompletableFuture<Void> copyTask = sourceImageMap.copyFromAsync(templateImageMap);
-                        copyTask.get(); // Wait for the completion of the copy operation
-
-                        sourceImageMap.update();
+                        copyTask.get();
 
                         sender.sendMessage(ImageFrame.messageImageMapRefreshed);
 
