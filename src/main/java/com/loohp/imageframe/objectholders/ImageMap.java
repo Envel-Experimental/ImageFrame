@@ -501,14 +501,13 @@ public abstract class ImageMap {
             List<MapView> sourceMapViews = sourceImageMap.getMapViews();
             List<MapView> targetMapViews = this.getMapViews();
 
-            IntStream.range(0, targetMapViews.size()).parallel().forEach(i -> {
+            for (int i = 0; i < targetMapViews.size(); i++) {
                 MapView sourceMapView = sourceMapViews.get(i);
                 MapView targetMapView = targetMapViews.get(i);
 
                 targetMapView.getRenderers().forEach(targetMapView::removeRenderer);
-
                 sourceMapView.getRenderers().forEach(targetMapView::addRenderer);
-            });
+            }
         });
     }
 

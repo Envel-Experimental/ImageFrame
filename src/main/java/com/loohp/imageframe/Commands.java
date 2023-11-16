@@ -70,6 +70,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -734,28 +735,25 @@ public class Commands implements CommandExecutor, TabCompleter {
                 if (args.length == 3) {
                     try {
                         ImageMap sourceImageMap = ImageMapUtils.justGet(args[1]);
-                        if (sourceImageMap == null) {
-                            sender.sendMessage(ImageFrame.messageNotAnImageMap);
-                            return true;
-                        }
-
                         ImageMap templateImageMap = ImageMapUtils.justGet(args[2]);
-                        if (templateImageMap == null) {
+
+                        if (sourceImageMap == null || templateImageMap == null) {
                             sender.sendMessage(ImageFrame.messageNotAnImageMap);
                             return true;
                         }
 
-                        try {
-                            sourceImageMap.copyFromAsync(templateImageMap).get();
-                        } catch (InterruptedException | ExecutionException e) {
-                            e.printStackTrace();
-                        }
+                        CompletableFuture<Void> copyTask = sourceImageMap.copyFromAsync(templateImageMap);
+                        copyTask.get(); // Wait for the completion of the copy operation
+
                         sourceImageMap.update();
 
                         sender.sendMessage(ImageFrame.messageImageMapRefreshed);
 
-                    } catch (Exception e) {
+                    } catch (InterruptedException | ExecutionException e) {
                         e.printStackTrace();
+                        sender.sendMessage("An error occurred while updating the image map.");
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
                 } else {
                     sender.sendMessage(ImageFrame.messageInvalidUsage);
@@ -764,7 +762,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ImageFrame.messageNoPermission);
             }
             return true;
-        } else if (args[0].equalsIgnoreCase("info")) {
+    } else if (args[0].equalsIgnoreCase("info")) {
             if (sender.hasPermission("imageframe.info")) {
                 MapView mapView;
                 if (args.length > 1) {
