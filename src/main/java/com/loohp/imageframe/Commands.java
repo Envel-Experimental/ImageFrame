@@ -70,6 +70,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -755,7 +756,11 @@ public class Commands implements CommandExecutor, TabCompleter {
                             return true;
                         }
 
-                        sourceImageMap.copyFrom(templateImageMap);
+                        try {
+                            sourceImageMap.copyFromAsync(templateImageMap).get();
+                        } catch (InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                        }
                         sourceImageMap.update();
 
                         sender.sendMessage(ImageFrame.messageImageMapRefreshed);

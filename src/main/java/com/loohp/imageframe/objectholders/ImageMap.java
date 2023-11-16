@@ -54,11 +54,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 public abstract class ImageMap {
 
@@ -494,25 +496,20 @@ public abstract class ImageMap {
 
     }
 
-    public void copyFrom(ImageMap sourceImageMap) {
-        List<MapView> sourceMapViews = sourceImageMap.getMapViews();
-        for (int i = 0; i < mapViews.size(); i++) {
-            MapView sourceMapView = sourceMapViews.get(i);
-            MapView targetMapView = mapViews.get(i);
+    public CompletableFuture<Void> copyFromAsync(ImageMap sourceImageMap) {
+        return CompletableFuture.runAsync(() -> {
+            List<MapView> sourceMapViews = sourceImageMap.getMapViews();
+            List<MapView> targetMapViews = this.getMapViews();
 
-            for (MapRenderer renderer : targetMapView.getRenderers()) {
-                targetMapView.removeRenderer(renderer);
-            }
+            IntStream.range(0, targetMapViews.size()).parallel().forEach(i -> {
+                MapView sourceMapView = sourceMapViews.get(i);
+                MapView targetMapView = targetMapViews.get(i);
 
-            for (MapRenderer sourceRenderer : sourceMapView.getRenderers()) {
-                targetMapView.addRenderer(sourceRenderer);
-            }
-        }
+                targetMapView.getRenderers().forEach(targetMapView::removeRenderer);
 
-        try {
-            update();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+                sourceMapView.getRenderers().forEach(targetMapView::addRenderer);
+            });
+        });
     }
+
 }
