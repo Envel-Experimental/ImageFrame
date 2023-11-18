@@ -23,7 +23,6 @@ package com.loohp.imageframe;
 import com.loohp.imageframe.config.Config;
 import com.loohp.imageframe.debug.Debug;
 import com.loohp.imageframe.listeners.Events;
-import com.loohp.imageframe.objectholders.AnimatedFakeMapManager;
 import com.loohp.imageframe.objectholders.CombinedMapItemHandler;
 import com.loohp.imageframe.objectholders.IFPlayerManager;
 import com.loohp.imageframe.objectholders.IFPlayerPreference;
@@ -148,7 +147,6 @@ public class ImageFrame extends JavaPlugin {
     public static ItemFrameSelectionManager itemFrameSelectionManager;
     public static MapMarkerEditManager mapMarkerEditManager;
     public static CombinedMapItemHandler combinedMapItemHandler;
-    public static AnimatedFakeMapManager animatedFakeMapManager;
     public static RateLimitedPacketSendingManager rateLimitedPacketSendingManager;
 
     public static boolean isURLAllowed(String url) {
@@ -262,7 +260,6 @@ public class ImageFrame extends JavaPlugin {
         itemFrameSelectionManager = new ItemFrameSelectionManager();
         mapMarkerEditManager = new MapMarkerEditManager();
         combinedMapItemHandler = new CombinedMapItemHandler();
-        animatedFakeMapManager = new AnimatedFakeMapManager();
         rateLimitedPacketSendingManager = new RateLimitedPacketSendingManager();
         Scheduler.runTaskAsynchronously(this, () -> imageMapManager.loadMapsAsync());
 

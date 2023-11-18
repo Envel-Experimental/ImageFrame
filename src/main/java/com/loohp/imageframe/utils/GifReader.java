@@ -21,7 +21,6 @@
 package com.loohp.imageframe.utils;
 
 import com.loohp.imageframe.objectholders.Scheduler;
-import com.madgag.gif.fmsware.GifDecoder;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -64,7 +63,6 @@ public class GifReader {
         CompletableFuture<List<ImageFrame>> future = new CompletableFuture<>();
         Scheduler.runTaskAsynchronously(com.loohp.imageframe.ImageFrame.plugin, () -> {
             List<ThrowingSupplier<List<ImageFrame>>> tries = new ArrayList<>(3);
-            tries.add(() -> readGifMethod0(new ByteArrayInputStream(targetArray)));
             tries.add(() -> readGifMethod1(new ByteArrayInputStream(targetArray)));
             tries.add(() -> readGifFallbackMethod(new ByteArrayInputStream(targetArray)));
             Throwable firstThrowable = null;
@@ -83,20 +81,6 @@ public class GifReader {
         return future;
     }
 
-    private static List<ImageFrame> readGifMethod0(InputStream stream) throws IOException {
-        GifDecoder reader = new GifDecoder();
-        if (reader.read(stream) == 0) {
-            List<ImageFrame> frames = new ArrayList<>(reader.getFrameCount());
-            for (int i = 0; i < reader.getFrameCount(); i++) {
-                BufferedImage image = reader.getFrame(i);
-                int delay = reader.getDelay(i);
-                frames.add(new ImageFrame(image, delay, ""));
-            }
-            return frames;
-        } else {
-            throw new IOException("Unable to read Gif");
-        }
-    }
 
     private static List<ImageFrame> readGifMethod1(InputStream input) throws IOException {
         ImageReader reader = ImageIO.getImageReadersByFormatName("gif").next();

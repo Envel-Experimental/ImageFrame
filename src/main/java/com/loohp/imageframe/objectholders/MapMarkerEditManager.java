@@ -70,12 +70,11 @@ public class MapMarkerEditManager implements Listener, AutoCloseable {
                 }
             }
             if (!additionCursors.isEmpty()) {
-                additionCursors.addAll(cursors);
-                renderData.setSecond(additionCursors);
+                cursors.addAll(additionCursors);
             }
         };
         ImageFrame.imageMapManager.appendRenderEventListener(renderEventListener);
-        this.task = Scheduler.runTaskTimer(ImageFrame.plugin, () -> editTask(), 0, 1);
+        this.task = Scheduler.runTaskTimer(ImageFrame.plugin, () -> editTask(), 0, 20);
         Bukkit.getPluginManager().registerEvents(this, ImageFrame.plugin);
     }
 
@@ -120,11 +119,8 @@ public class MapMarkerEditManager implements Listener, AutoCloseable {
             }
             MapMarkerEditData editData = entry.getValue();
             ImageMap imageMap = editData.getImageMap();
-            if (!imageMap.isValid()) {
+            if (!imageMap.isValid() || !imageMap.getMapViews().contains(mapView)) {
                 leaveActiveEditing(player);
-                continue;
-            }
-            if (!imageMap.getMapViews().contains(mapView)) {
                 continue;
             }
             Point2D target = MapUtils.getTargetPixelOnItemFrame(itemFrame.getLocation().toVector(), itemFrame.getFacing().getDirection(), hitPosition, itemFrame.getRotation());
@@ -184,21 +180,11 @@ public class MapMarkerEditManager implements Listener, AutoCloseable {
             return;
         }
         ItemStack itemStack = itemFrame.getItem();
-        if (itemStack == null || itemStack.getType().equals(Material.AIR)) {
+        if (itemStack == null || itemStack.getType().equals(Material.AIR) || !itemStack.hasItemMeta() || !(itemStack.getItemMeta() instanceof MapMeta)) {
             return;
         }
-        if (!itemStack.hasItemMeta()) {
-            return;
-        }
-        ItemMeta itemMeta = itemStack.getItemMeta();
-        if (!(itemMeta instanceof MapMeta)) {
-            return;
-        }
-        MapMeta mapMeta = (MapMeta) itemMeta;
+        MapMeta mapMeta = (MapMeta) itemStack.getItemMeta();
         MapView mapView = mapMeta.getMapView();
-        if (mapView == null) {
-            return;
-        }
         ImageMap imageMap = editData.getImageMap();
         if (!imageMap.getMapViews().contains(mapView)) {
             return;
@@ -259,5 +245,4 @@ public class MapMarkerEditManager implements Listener, AutoCloseable {
         }
 
     }
-
 }
