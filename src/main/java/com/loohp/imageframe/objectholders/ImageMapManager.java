@@ -62,7 +62,7 @@ public class ImageMapManager implements AutoCloseable {
         this.tickCounter = new AtomicInteger(0);
         this.renderEventListeners = new CopyOnWriteArrayList<>();
         this.deletedMapIds = ConcurrentHashMap.newKeySet();
-        this.task = Scheduler.runTaskTimerAsynchronously(ImageFrame.plugin, () -> tickCounter.incrementAndGet(), 0, 1);
+        this.task = Scheduler.runTaskTimerAsynchronously(ImageFrame.plugin, tickCounter::incrementAndGet, 0, 20);
     }
 
     public File getDataFolder() {
