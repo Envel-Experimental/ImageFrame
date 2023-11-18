@@ -1,0 +1,77 @@
+plugins {
+    id 'java'
+    id "com.github.johnrengelman.shadow" version "7.1.1"
+}
+
+group 'com.loohp'
+version '1.7.6-foxford-0.1'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    maven {
+        url 'https://repo.papermc.io/repository/maven-public/'
+    }
+    mavenCentral()
+    maven {
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+        content {
+            includeGroup 'org.bukkit'
+            includeGroup 'org.spigotmc'
+        }
+    }
+    maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
+    maven { url = 'https://oss.sonatype.org/content/repositories/central' }
+    mavenLocal()
+    maven {
+        url 'https://jitpack.io'
+    }
+    maven {
+        url 'https://papermc.io/repo/repository/maven-public/'
+    }
+    maven {
+        url 'https://oss.sonatype.org/content/groups/public/'
+    }
+    maven {
+        url 'https://repo.codemc.org/repository/maven-public/'
+    }
+    maven {
+        url 'https://repo.dmulloy2.net/nexus/repository/public/'
+    }
+    maven {
+        url 'https://repo.viaversion.com'
+    }
+    maven {
+        url 'https://repo.loohpjames.com/repository'
+    }
+}
+
+dependencies {
+    compileOnly 'com.viaversion:viaversion-api:4.5.1'
+    implementation 'me.carleslc.Simple-YAML:Simple-Yaml:1.8.4'
+    implementation 'com.madgag:animated-gif-lib:1.4'
+    compileOnly 'org.spigotmc:spigot-api:1.16.2-R0.1-SNAPSHOT'
+    implementation 'com.twelvemonkeys.imageio:imageio-webp:3.9.3'
+    compileOnly 'com.comphenix.protocol:ProtocolLib:5.0.0-SNAPSHOT'
+    implementation 'io.github.bananapuncher714:nbteditor:7.18.7'
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+}
+
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}
+
+shadowJar {
+    archiveFileName = 'ImageFrame-' + project.version.toString() + '.jar';
+}
+
+artifacts {
+    shadowJar;
+}

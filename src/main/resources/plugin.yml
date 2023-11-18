@@ -1,9 +1,9 @@
 name: ImageFrame
-version: '${project.version}'
+version: 'foxford-0.2'
 main: com.loohp.imageframe.ImageFrame
 api-version: 1.13
 prefix: ImageFrame
-authors: [LOOHP]
+authors: [LOOHP, Envel_Go]
 description: Put images on maps and walls!
 folia-supported: true
 depend: [ProtocolLib]

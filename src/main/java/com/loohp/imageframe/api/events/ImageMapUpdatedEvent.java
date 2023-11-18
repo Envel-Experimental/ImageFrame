@@ -37,7 +37,7 @@ public class ImageMapUpdatedEvent extends Event {
     private final ImageMap imageMap;
 
     public ImageMapUpdatedEvent(ImageMap imageMap) {
-        super(Scheduler.FOLIA || !Bukkit.isPrimaryThread());
+        super(!Bukkit.isPrimaryThread());
         this.imageMap = imageMap;
     }
 
