@@ -43,23 +43,14 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public abstract class ImageMap {
@@ -71,10 +62,12 @@ public abstract class ImageMap {
 
     @SuppressWarnings("unchecked")
     public static Future<? extends ImageMap> load(ImageMapManager manager, File folder) throws Exception {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(new File(folder, "data.json").toPath()), StandardCharsets.UTF_8))) {
+        try (BufferedReader reader = Files.newBufferedReader(new File(folder, "data.json").toPath(), StandardCharsets.UTF_8)) {
             JsonObject json = GSON.fromJson(reader, JsonObject.class);
             String type = json.get("type").getAsString();
-            return (Future<? extends ImageMap>) Class.forName(type).getMethod("load", ImageMapManager.class, File.class, JsonObject.class).invoke(null, manager, folder, json);
+            return (Future<? extends ImageMap>) Class.forName(type)
+                    .getMethod("load", ImageMapManager.class, File.class, JsonObject.class)
+                    .invoke(null, manager, folder, json);
         }
     }
 
@@ -329,38 +322,32 @@ public abstract class ImageMap {
         fillItemFrames(itemFrames, rotation, prePlaceCheck, unableToPlaceAction, mapNameFormat, itemStack -> itemStack);
     }
 
-    public void fillItemFrames(List<ItemFrame> itemFrames, Rotation rotation, BiPredicate<ItemFrame, ItemStack> prePlaceCheck, BiConsumer<ItemFrame, ItemStack> unableToPlaceAction, String mapNameFormat, Function<ItemStack, ItemStack> postCreationFunction) {
-        if (itemFrames.size() != mapViews.size()) {
-            throw new IllegalArgumentException("itemFrames size does not equal to mapView size");
-        }
-        List<ItemStack> items = getMaps(mapNameFormat, postCreationFunction);
-        Iterator<ItemFrame> itr0 = itemFrames.iterator();
-        Iterator<ItemStack> itr1 = items.iterator();
-        while (itr0.hasNext() && itr1.hasNext()) {
-            ItemFrame frame = itr0.next();
-            ItemStack item = itr1.next();
-            Scheduler.runTask(ImageFrame.plugin, () -> {
-                if (frame.isValid()) {
-                    if (prePlaceCheck.test(frame, item)) {
-                        frame.setItem(item, false);
-                        frame.setRotation(rotation);
-                        return;
-                    }
-                }
-                unableToPlaceAction.accept(frame, item);
-            }, frame);
-        }
+    public void fillItemFrames(List<ItemFrame> itemFrames, Rotation rotation,
+                               BiPredicate<ItemFrame, ItemStack> prePlaceCheck,
+                               BiConsumer<ItemFrame, ItemStack> unableToPlaceAction,
+                               String mapNameFormat, Function<ItemStack, ItemStack> postCreationFunction) {
+        // Simplified iteration using Java Streams
+        IntStream.range(0, Math.min(itemFrames.size(), mapViews.size()))
+                .forEach(i -> {
+                    ItemFrame frame = itemFrames.get(i);
+                    ItemStack item = getMap(i % width, i / width, mapNameFormat, postCreationFunction);
+                    Scheduler.runTask(ImageFrame.plugin, () -> {
+                        if (frame.isValid() && prePlaceCheck.test(frame, item)) {
+                            frame.setItem(item, false);
+                            frame.setRotation(rotation);
+                        } else {
+                            unableToPlaceAction.accept(frame, item);
+                        }
+                    }, frame);
+                });
     }
 
     public Set<Player> getViewers() {
-        Set<Player> players = new HashSet<>();
-        for (MapView mapView : mapViews) {
-            Set<Player> set = MapUtils.getViewers(mapView);
-            if (set != null) {
-                players.addAll(set);
-            }
-        }
-        return players;
+        return mapViews.stream()
+                .map(MapUtils::getViewers)
+                .filter(Objects::nonNull)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
     }
 
     public UUID getCreator() {
@@ -497,18 +484,15 @@ public abstract class ImageMap {
     }
 
     public CompletableFuture<Void> copyFromAsync(ImageMap sourceImageMap) {
-        return CompletableFuture.runAsync(() -> {
-            List<MapView> sourceMapViews = sourceImageMap.getMapViews();
-            List<MapView> targetMapViews = this.getMapViews();
+        List<CompletableFuture<Void>> copyTasks = mapViews.stream()
+                .map(targetMapView -> CompletableFuture.runAsync(() -> {
+                    targetMapView.getRenderers().forEach(targetMapView::removeRenderer);
+                    sourceImageMap.getMapViews().get(mapViews.indexOf(targetMapView)).getRenderers()
+                            .forEach(targetMapView::addRenderer);
+                }))
+                .collect(Collectors.toList());
 
-            for (int i = 0; i < targetMapViews.size(); i++) {
-                MapView sourceMapView = sourceMapViews.get(i);
-                MapView targetMapView = targetMapViews.get(i);
-
-                targetMapView.getRenderers().forEach(targetMapView::removeRenderer);
-                sourceMapView.getRenderers().forEach(targetMapView::addRenderer);
-            }
-        });
+        return CompletableFuture.allOf(copyTasks.toArray(new CompletableFuture[0]));
     }
 
 }

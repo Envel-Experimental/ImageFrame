@@ -52,9 +52,9 @@ dependencies {
     implementation 'me.carleslc.Simple-YAML:Simple-Yaml:1.8.4'
     implementation 'com.madgag:animated-gif-lib:1.4'
     compileOnly 'org.spigotmc:spigot-api:1.16.2-R0.1-SNAPSHOT'
-    implementation 'com.twelvemonkeys.imageio:imageio-webp:3.9.3'
+    implementation 'com.twelvemonkeys.imageio:imageio-webp:3.10.1'
     compileOnly 'com.comphenix.protocol:ProtocolLib:5.0.0-SNAPSHOT'
-    implementation 'io.github.bananapuncher714:nbteditor:7.18.7'
+    implementation 'io.github.bananapuncher714:nbteditor:7.19.0'
     implementation 'com.googlecode.json-simple:json-simple:1.1.1'
 }
 

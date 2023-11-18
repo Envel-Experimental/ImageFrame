@@ -68,19 +68,17 @@ public class AnimatedFakeMapManager implements Listener, Runnable {
         this.pendingKnownMapIds = new ConcurrentHashMap<>();
         Scheduler.runTaskTimerAsynchronously(ImageFrame.plugin, this, 0, 1);
         Bukkit.getPluginManager().registerEvents(this, ImageFrame.plugin);
-        for (World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                handleEntity(entity);
-            }
-        }
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        Bukkit.getWorlds().forEach(world -> world.getEntities().forEach(this::handleEntity));
+        Bukkit.getOnlinePlayers().forEach(player -> {
             knownMapIds.put(player, ConcurrentHashMap.newKeySet());
             pendingKnownMapIds.put(player, ConcurrentHashMap.newKeySet());
-        }
+        });
     }
 
     public void run() {
         Map<Player, List<FakeItemUtils.ItemFrameUpdateData>> updateData = new HashMap<>();
+        Set<Player> playersToUpdate = new HashSet<>();
+
         for (Map.Entry<ItemFrame, Holder<AnimationData>> entry : itemFrames.entrySet()) {
             ItemFrame itemFrame = entry.getKey();
             if (!itemFrame.isValid()) {
@@ -176,37 +174,15 @@ public class AnimatedFakeMapManager implements Listener, Runnable {
                         }
                     }
                 } else {
-                    sendingTasks.computeIfAbsent(player, k -> new ArrayList<>()).add(() -> FakeItemUtils.sendFakeItemChange(player, entry.getValue()));
+                    playersToUpdate.add(player);
                 }
             }
         }
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (ImageFrame.ifPlayerManager.getIFPlayer(player.getUniqueId()).getPreference(IFPlayerPreference.VIEW_ANIMATED_MAPS, BooleanState.class).getCalculatedValue(() -> ImageFrame.getPreferenceUnsetValue(player, IFPlayerPreference.VIEW_ANIMATED_MAPS).getRawValue(true))) {
-                ItemStack mainhand = player.getEquipment().getItemInMainHand();
-                ItemStack offhand = player.getEquipment().getItemInOffHand();
-                MapView mainHandView = MapUtils.getItemMapView(mainhand);
-                MapView offhandView = MapUtils.getItemMapView(offhand);
-                if (mainHandView != null) {
-                    ImageMap mainHandMap = ImageFrame.imageMapManager.getFromMapView(mainHandView);
-                    if (mainHandMap != null && mainHandMap.requiresAnimationService()) {
-                        sendingTasks.computeIfAbsent(player, k -> new ArrayList<>()).add(() -> mainHandMap.send(player));
-                    }
-                }
-                if (offhandView != null && !offhandView.equals(mainHandView)) {
-                    ImageMap offHandMap = ImageFrame.imageMapManager.getFromMapView(offhandView);
-                    if (offHandMap != null && offHandMap.requiresAnimationService()) {
-                        sendingTasks.computeIfAbsent(player, k -> new ArrayList<>()).add(() -> offHandMap.send(player));
-                    }
-                }
-            }
-        }
-        if (ImageFrame.sendAnimatedMapsOnMainThread) {
-            for (Map.Entry<Player, List<Runnable>> entry : sendingTasks.entrySet()) {
-                Scheduler.runTask(ImageFrame.plugin, () -> entry.getValue().forEach(Runnable::run), entry.getKey());
-            }
-        } else {
-            sendingTasks.values().forEach(l -> l.forEach(Runnable::run));
-        }
+
+        playersToUpdate.forEach(player -> {
+            List<Runnable> tasks = sendingTasks.get(player);
+            tasks.forEach(Runnable::run);
+        });
     }
 
     private ItemStack getMapItem(int mapId) {
@@ -222,26 +198,15 @@ public class AnimatedFakeMapManager implements Listener, Runnable {
             return;
         }
         ItemFrame itemFrame = (ItemFrame) entity;
-        if (itemFrames.containsKey(itemFrame)) {
-            return;
-        }
-        MapView mapView = MapUtils.getItemMapView(itemFrame.getItem());
-        if (mapView == null) {
-            itemFrames.put(itemFrame, Holder.hold(AnimationData.EMPTY));
-            return;
-        }
-        ImageMap map = ImageFrame.imageMapManager.getFromMapView(mapView);
-        if (map == null || !map.requiresAnimationService()) {
-            itemFrames.put(itemFrame, Holder.hold(AnimationData.EMPTY));
-            return;
-        }
-        itemFrames.put(itemFrame, Holder.hold(new AnimationData(map, mapView, map.getMapViews().indexOf(mapView))));
+        itemFrames.computeIfAbsent(itemFrame, k -> Holder.hold(AnimationData.EMPTY));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onChunkLoad(ChunkLoadEvent event) {
         for (Entity entity : event.getChunk().getEntities()) {
-            handleEntity(entity);
+            if (entity instanceof ItemFrame) {
+                handleEntity(entity);
+            }
         }
     }
 

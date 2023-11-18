@@ -1,29 +1,8 @@
-/*
- * This file is part of ImageFrame.
- *
- * Copyright (C) 2022. LoohpJames <jamesloohp@gmail.com>
- * Copyright (C) 2022. Contributors
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
-
 package com.loohp.imageframe.objectholders;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.loohp.imageframe.ImageFrame;
 import com.loohp.imageframe.utils.FileUtils;
@@ -50,7 +29,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -234,16 +212,14 @@ public class ImageMapManager implements AutoCloseable {
 
             Arrays.sort(files, FileUtils.BY_NUMBER_THAN_STRING);
 
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    Bukkit.getConsoleSender().sendMessage(ChatColor.GRAY + "[ImageFrame] Loading ImageMap ID " + file.getName());
-                    mapLoadFutures.add(loadImageMapAsync(file));
-                } else if (file.getName().equalsIgnoreCase("deletedMaps.bin")) {
-                    loadDeletedMapsBinary(file);
-                } else if (file.getName().equalsIgnoreCase("deletedMaps.json")) {
-                    loadDeletedMapsJson(file);
-                    backupAndDeleteLegacyFile(file);
-                }
+            int batchSize = 10;
+
+            for (int i = 0; i < files.length; i += batchSize) {
+                List<File> batch = Arrays.asList(files).subList(i, Math.min(i + batchSize, files.length));
+                CompletableFuture<Void> batchLoadFuture = CompletableFuture.allOf(batch.stream()
+                        .map(this::loadImageMapAsync)
+                        .toArray(CompletableFuture[]::new));
+                mapLoadFutures.add(batchLoadFuture);
             }
 
             CompletableFuture<Void> allMapLoadFuture = CompletableFuture.allOf(mapLoadFutures.toArray(new CompletableFuture[0]));
@@ -261,7 +237,6 @@ public class ImageMapManager implements AutoCloseable {
                 addMap(imageMap);
             } catch (Throwable e) {
                 Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMap data in " + file.getAbsolutePath());
-                e.printStackTrace();
             }
         });
     }
@@ -284,7 +259,6 @@ public class ImageMapManager implements AutoCloseable {
             deletedMapIdsArray.forEach(element -> deletedMapIds.add(element.getAsInt()));
         } catch (IOException e) {
             Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMapManager data in " + file.getAbsolutePath());
-            e.printStackTrace();
         }
         saveDeletedMaps();
     }
