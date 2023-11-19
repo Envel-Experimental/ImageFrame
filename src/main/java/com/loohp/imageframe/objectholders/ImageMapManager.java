@@ -243,14 +243,19 @@ public class ImageMapManager implements AutoCloseable {
 
     private void loadDeletedMapsBinary(File file) {
         try (DataInputStream dataInputStream = new DataInputStream(Files.newInputStream(file.toPath()))) {
-            try {
-                deletedMapIds.add(dataInputStream.readInt());
-            } catch (EOFException ignore) {}
+            while (true) {
+                try {
+                    deletedMapIds.add(dataInputStream.readInt());
+                } catch (EOFException ignore) {
+                    break;
+                }
+            }
         } catch (IOException e) {
             Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMapManager data in " + file.getAbsolutePath());
             e.printStackTrace();
         }
     }
+
 
     private void loadDeletedMapsJson(File file) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8))) {
