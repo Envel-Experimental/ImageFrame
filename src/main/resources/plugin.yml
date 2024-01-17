@@ -1,7 +1,7 @@
 name: ImageFrame
-version: 'foxford-0.2'
+version: 'foxford-0.3'
 main: com.loohp.imageframe.ImageFrame
-api-version: 1.13
+api-version: 1.16
 prefix: ImageFrame
 authors: [LOOHP, Envel_Go]
 description: Put images on maps and walls!

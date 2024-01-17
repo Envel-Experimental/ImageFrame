@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'com.loohp'
-version '1.7.6-foxford-0.1'
+version '1.7.6-foxford-0.3'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8

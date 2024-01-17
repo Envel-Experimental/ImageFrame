@@ -236,7 +236,7 @@ public class ImageMapManager implements AutoCloseable {
                 ImageMap imageMap = ImageMap.load(this, file).get();
                 addMap(imageMap);
             } catch (Throwable e) {
-                Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[ImageFrame] Unable to load ImageMap data in " + file.getAbsolutePath());
+                Bukkit.getConsoleSender().sendMessage(ChatColor.YELLOW + "[ImageFrame] Unable to load ImageMap data in " + file.getAbsolutePath());
             }
         });
     }

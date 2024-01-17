@@ -67,6 +67,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 public class MapUtils {
@@ -103,6 +105,8 @@ public class MapUtils {
     private static Class<?> nmsItemWorldMapClass;
     private static Method nmsItemWorldMapMakeKeyMethod;
     private static Method nmsWorldServerDimensionMethod;
+
+    private static final ConcurrentHashMap<Integer, CompletableFuture<MapView>> mapViewCache = new ConcurrentHashMap<>();
 
     static {
         try {
@@ -476,24 +480,46 @@ public class MapUtils {
         return FutureUtils.callSyncMethod(() -> Bukkit.getMap(id));
     }
 
-    public static Future<MapView> getMapOrCreateMissing(World world, int id) {
-        return FutureUtils.callSyncMethod(() -> {
+    public static CompletableFuture<MapView> getMapOrCreateMissing(World world, int id) {
+        CompletableFuture<MapView> cachedResult = mapViewCache.get(id);
+        if (cachedResult != null) {
+            return cachedResult;
+        }
+
+        CompletableFuture<MapView> result = CompletableFuture.supplyAsync(() -> {
             MapView mapView = Bukkit.getMap(id);
             if (mapView != null) {
                 return mapView;
             }
-            Location spawnLocation = world.getSpawnLocation();
-            Object nmsWorld = craftWorldGetHandleMethod.invoke(craftWorldClass.cast(world));
-            Object nmsDimension = nmsWorldServerDimensionMethod.invoke(nmsWorld);
-            Object worldMap = nmsWorldMapCreateFreshMethod.invoke(null, spawnLocation.getX(), spawnLocation.getZ(), (byte) 3, false, false, nmsDimension);
-            if (nmsWorldServerSetMapDataMethod.getParameterCount() == 1) {
-                nmsWorldServerSetMapDataMethod.invoke(nmsWorld, worldMap);
-            } else {
-                Object mapStringId = nmsItemWorldMapMakeKeyMethod.invoke(null, id);
-                nmsWorldServerSetMapDataMethod.invoke(nmsWorld, mapStringId, worldMap);
+
+            try {
+                Location spawnLocation = world.getSpawnLocation();
+                Object nmsWorld = craftWorldGetHandleMethod.invoke(craftWorldClass.cast(world));
+                Object nmsDimension = nmsWorldServerDimensionMethod.invoke(nmsWorld);
+                Object worldMap = nmsWorldMapCreateFreshMethod.invoke(null, spawnLocation.getX(), spawnLocation.getZ(), (byte) 3, false, false, nmsDimension);
+
+                if (nmsWorldServerSetMapDataMethod.getParameterCount() == 1) {
+                    nmsWorldServerSetMapDataMethod.invoke(nmsWorld, worldMap);
+                } else {
+                    Object mapStringId = nmsItemWorldMapMakeKeyMethod.invoke(null, id);
+                    nmsWorldServerSetMapDataMethod.invoke(nmsWorld, mapStringId, worldMap);
+                }
+
+                mapView = Bukkit.getMap(id);
+                return mapView;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to create or load MapView with ID: " + id, e);
             }
-            return Bukkit.getMap(id);
         });
+
+        mapViewCache.put(id, result);
+
+        result = result.exceptionally(ex -> {
+            ex.printStackTrace();
+            return null;
+        });
+
+        return result;
     }
 
     @SuppressWarnings("unchecked")
